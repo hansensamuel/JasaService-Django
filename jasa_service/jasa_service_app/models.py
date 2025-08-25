@@ -21,16 +21,17 @@ class ServiceDevice(models.Model):
         ('Tidak Aktif', 'Tidak Aktif'),
     )
     service_status_choices = (
-        ('Masuk', 'Masuk'),               # Baru datang
-        ('Proses', 'Proses'),             # Dalam proses perbaikan
-        ('Selesai', 'Selesai'),           # Sudah diperbaiki
-        ('Diambil', 'Diambil'),           # Sudah diambil oleh pelanggan
+        ('Masuk', 'Masuk'),               
+        ('Proses', 'Proses'),             
+        ('Selesai', 'Selesai'),           
+        ('Diambil', 'Diambil'),           
     )
 
     code = models.CharField(max_length=20, help_text="Kode unik perangkat")
-    customer_name = models.CharField(max_length=100, help_text="Nama pelanggan")
-    device_type = models.CharField(max_length=50, help_text="Jenis perangkat (PC, Laptop, dll)")
-    brand = models.CharField(max_length=50, help_text="Merek perangkat")
+
+    customer = models.ForeignKey('Customer', on_delete=models.CASCADE, help_text="Nama pelanggan")
+    device = models.ForeignKey('Device', on_delete=models.CASCADE)
+
     damage_description = models.TextField(help_text="Deskripsi kerusakan")
     service_status = models.CharField(max_length=20, choices=service_status_choices, default='Masuk')
     status = models.CharField(max_length=15, choices=status_choices, default='Aktif')
@@ -40,9 +41,18 @@ class ServiceDevice(models.Model):
 
     created_on = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
-
+    
     def __str__(self):
-        return f"{self.code} - {self.customer_name}"
+        return f"{self.code} - {self.customer.name}"
+    
+    @property
+    def device_type(self):
+        return self.device.model
+
+    @property
+    def brand(self):
+        return self.device.brand
+
 
 class Customer(models.Model):
     CUSTOMER_TYPES = (

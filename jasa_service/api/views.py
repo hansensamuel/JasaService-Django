@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from api.serializers import (
     RegisterUserSerializer, LoginSerializer, ServiceDeviceSerializer,
     CustomerSerializer, TechnicianSerializer, DeviceSerializer,
@@ -15,25 +17,27 @@ from jasa_service_app.models import (
     Order, ServiceType, SparePart, Inventory, Payment
 )
 
-# Registrasi Pengguna
+
 class RegisterUserAPIView(APIView):
     serializer_class = RegisterUserSerializer
 
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+            token, _ = Token.objects.get_or_create(user=user)
             return Response({
                 'status': status.HTTP_201_CREATED,
-                'message': 'Selamat, Anda berhasil terdaftar.',
+                'message': 'Selamat anda telah terdaftar...',
                 'data': serializer.data,
+                'token': token.key
             }, status=status.HTTP_201_CREATED)
         return Response({
             'status': status.HTTP_400_BAD_REQUEST,
             'data': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+    
 
-# Login Pengguna
 class LoginView(APIView):
     serializer_class = LoginSerializer
 
@@ -58,8 +62,11 @@ class LoginView(APIView):
             }
         })
 
-# List & Tambah Data Service Perangkat
+
 class ServiceDeviceListApiView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         devices = ServiceDevice.objects.all()
         serializer = ServiceDeviceSerializer(devices, many=True)
@@ -76,7 +83,7 @@ class ServiceDeviceListApiView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Detail / Update / Hapus Data Perangkat
+
 class ServiceDeviceDetailApiView(APIView):
     def get_object(self, id):
         try:
@@ -109,10 +116,12 @@ class ServiceDeviceDetailApiView(APIView):
         return Response({'status': 200, 'message': 'Data berhasil dihapus.'})
 
 
-# View Dinamis untuk Semua Model Lainnya
+
 class BaseModelListCreateView(APIView):
     model_class = None
     serializer_class = None
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         items = self.model_class.objects.all()
@@ -129,6 +138,8 @@ class BaseModelListCreateView(APIView):
 class BaseModelDetailView(APIView):
     model_class = None
     serializer_class = None
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, id):
         try:
@@ -160,7 +171,7 @@ class BaseModelDetailView(APIView):
         obj.delete()
         return Response({'message': 'Data berhasil dihapus.'}, status=200)
 
-# Daftar View Dinamis untuk Masing-masing Model
+
 class CustomerListCreateView(BaseModelListCreateView):
     model_class = Customer
     serializer_class = CustomerSerializer
